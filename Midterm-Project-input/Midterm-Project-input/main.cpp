@@ -79,7 +79,7 @@ int main()
     
     
     // 目前可以儲存幾個工作
-    int proportion = orderNum / machineNum + 1;
+    int proportion = orderNum / machineNum + 2;
     int* machineProportion = new int[machineNum];
     for (int i = 0; i < machineNum; i++)
         machineProportion[i] = proportion;
@@ -105,11 +105,12 @@ int main()
     }
     
     
-    
     // 機器距離當前訂單完成的時間
     int* machineJobClearTime = new int[machineNum];
     for (int i = 0; i < machineNum; i++)
         machineJobClearTime[i] = 1;
+    
+    
     
     // 完成的訂單總數
     int finish = 0;
@@ -125,6 +126,7 @@ int main()
 //        cout << endl;
         // 此期已分配的訂單數
         int distributedNum = 0;
+        int machineFixNum = 0;
         for (int i = 0; i < machineNum; i++)
         {
             if (finish == orderNum)
@@ -134,50 +136,110 @@ int main()
             // 如果機器空出
             if (machineJobClearTime[machineRank[i]] == 0)
             {
-//                cout << "yes" << endl;
-                // 確認儲存陣列的長度
-                if (jobNum[machineRank[i]] + 1 <= machineProportion[machineRank[i]])
+                double whenMaintain = (orderQuantity[orderRank[distributedNum]] / output[machineRank[i]]) * (decrease[machineRank[i]] / decrease[machineRank[i]] + 3) + fixTime[machineRank[i]];
+                double whenNoMaintain = (orderQuantity[orderRank[distributedNum]] / (output[machineRank[i]] * init[machineRank[i]])) * (decrease[machineRank[i]] / decrease[machineRank[i]] + 3) + 3;
+                bool underFix = false;
+                
+                if(whenMaintain <= whenNoMaintain && machineFixNum < fixLim)
                 {
-//                    cout << "long enough" << orderRank[distributedNum] << endl;
-                    // 將訂單分配給該機器，儲存於機器的負責訂單陣列中
-                    machineJob[machineRank[i]][jobNum[machineRank[i]]] = orderRank[distributedNum];
-                    jobNum[machineRank[i]]++;
+                    underFix = true;
+                    machineFixNum++;
+                    // 確認儲存陣列的長度
+                    if (jobNum[machineRank[i]] + 2 <= machineProportion[machineRank[i]])
+                    {
+    //                    cout << "long enough" << orderRank[distributedNum] << endl;
+                        // 將訂單分配給該機器，儲存於機器的負責訂單陣列中
+                        machineJob[machineRank[i]][jobNum[machineRank[i]]] = -1;
+                        jobNum[machineRank[i]]++;
+                        
+                        machineJob[machineRank[i]][jobNum[machineRank[i]]] = orderRank[distributedNum];
+                        jobNum[machineRank[i]]++;
+                    }
+                    else
+                    {
+    //                    cout << " not long enough" << orderRank[i] << endl;
+                        // 儲存陣列不夠長時，把陣列長度變兩倍
+                        int* temp = new int[machineProportion[machineRank[i]] * 2];
+                        for (int j = 0; j < jobNum[machineRank[i]]; j++)
+                            temp[j] = machineJob[machineRank[i]][j];
+                        
+                        delete machineJob[machineRank[i]];
+                        machineJob[machineRank[i]] = temp;
+                        // 更新陣列長度及以該機器已分配的工作數量
+                        machineProportion[machineRank[i]] *= 2;
+                        machineJob[machineRank[i]][jobNum[machineRank[i]]] = -1;
+                        jobNum[machineRank[i]]++;
+                        machineJob[machineRank[i]][jobNum[machineRank[i]]] = orderRank[distributedNum];
+                        jobNum[machineRank[i]]++;
+                    }
+                
+                    int count = 0;
+                    // 產量可能出現小數，因此設定以生產量也為double，在題目未說明下我們假設產品可分割，每階段小數皆保留
+                    double made = 0;
+                    // 當為此訂單製造的量小於訂單要求時，持續生產
+                    while (made < orderQuantity[orderRank[distributedNum]])
+                    {
+                        count += 1;
+                        // 良率有最低限制
+                        made += max(output[machineRank[i]] * (100 - decrease[machineRank[i]] * (count - 1)) * 0.01, output[machineRank[i]] * low[machineRank[i]] * 0.01);
+                    }
+                    // 機台剩餘運作時間
+                    machineJobClearTime[machineRank[i]] = count + fixTime[machineRank[i]];
+                    // 機台完成訂單後良率
+                    init[machineRank[i]] = max(100 - decrease[machineRank[i]] * (count - 1), low[machineRank[i]]);
+                    // 該訂單完成
+                    orderFinish[orderRank[distributedNum]] = 1;
+                    distributedNum++;
+                    // 訂單完成數加一
+                    finish++;
+
                 }
                 else
                 {
-//                    cout << " not long enough" << orderRank[i] << endl;
-                    // 儲存陣列不夠長時，把陣列長度變兩倍
-                    int* temp = new int[machineProportion[machineRank[i]] * 2];
-                    for (int j = 0; j < jobNum[machineRank[i]]; j++)
-                        temp[j] = machineJob[machineRank[i]][j];
-                    
-                    delete machineJob[machineRank[i]];
-                    machineJob[machineRank[i]] = temp;
-                    // 更新陣列長度及以該機器已分配的工作數量
-                    machineProportion[machineRank[i]] *= 2;
-                    machineJob[machineRank[i]][jobNum[machineRank[i]]] = orderRank[distributedNum];
-                    jobNum[machineRank[i]]++;
+                    // 確認儲存陣列的長度
+                    if (jobNum[machineRank[i]] + 1 <= machineProportion[machineRank[i]])
+                    {
+    //                    cout << "long enough" << orderRank[distributedNum] << endl;
+                        // 將訂單分配給該機器，儲存於機器的負責訂單陣列中
+                        machineJob[machineRank[i]][jobNum[machineRank[i]]] = orderRank[distributedNum];
+                        jobNum[machineRank[i]]++;
+                    }
+                    else
+                    {
+    //                    cout << " not long enough" << orderRank[i] << endl;
+                        // 儲存陣列不夠長時，把陣列長度變兩倍
+                        int* temp = new int[machineProportion[machineRank[i]] * 2];
+                        for (int j = 0; j < jobNum[machineRank[i]]; j++)
+                            temp[j] = machineJob[machineRank[i]][j];
+                        
+                        delete machineJob[machineRank[i]];
+                        machineJob[machineRank[i]] = temp;
+                        // 更新陣列長度及以該機器已分配的工作數量
+                        machineProportion[machineRank[i]] *= 2;
+                        machineJob[machineRank[i]][jobNum[machineRank[i]]] = orderRank[distributedNum];
+                        jobNum[machineRank[i]]++;
+                    }
+                
+                    int count = 0;
+                    // 產量可能出現小數，因此設定以生產量也為double，在題目未說明下我們假設產品可分割，每階段小數皆保留
+                    double made = 0;
+                    // 當為此訂單製造的量小於訂單要求時，持續生產
+                    while (made < orderQuantity[orderRank[distributedNum]])
+                    {
+                        count += 1;
+                        // 良率有最低限制
+                        made += max(output[machineRank[i]] * (init[machineRank[i]] - decrease[machineRank[i]] * count) * 0.01, output[machineRank[i]] * low[machineRank[i]] * 0.01);
+                    }
+                    // 機台剩餘運作時間
+                    machineJobClearTime[machineRank[i]] = count;
+                    // 機台完成訂單後良率
+                    init[machineRank[i]] = max(init[machineRank[i]] - decrease[machineRank[i]] * count, low[machineRank[i]]);
+                    // 該訂單完成
+                    orderFinish[orderRank[distributedNum]] = 1;
+                    distributedNum++;
+                    // 訂單完成數加一
+                    finish++;
                 }
-            
-                int count = 0;
-                // 產量可能出現小數，因此設定以生產量也為double，在題目未說明下我們假設產品可分割，每階段小數皆保留
-                double made = 0;
-                // 當為此訂單製造的量小於訂單要求時，持續生產
-                while (made < orderQuantity[orderRank[distributedNum]])
-                {
-                    count += 1;
-                    // 良率有最低限制
-                    made += max(output[machineRank[i]] * (init[machineRank[i]] - decrease[machineRank[i]] * count) * 0.01, output[machineRank[i]] * low[machineRank[i]] * 0.01);
-                }
-                // 機台剩餘運作時間
-                machineJobClearTime[machineRank[i]] = count;
-                // 機台完成訂單後良率
-                init[machineRank[i]] = max(init[machineRank[i]] - decrease[machineRank[i]] * count, low[machineRank[i]]);
-                // 該訂單完成
-                orderFinish[orderRank[distributedNum]] = 1;
-                distributedNum++;
-                // 訂單完成數加一
-                finish++;
             }
         }
         currentTime++;
@@ -193,7 +255,12 @@ int main()
             if (j == jobNum[i] - 1)
                 cout << machineJob[i][j] + 1 << endl;
             else
-                cout << machineJob[i][j] + 1 << ",";
+            {
+                if (machineJob[i][j] == -1)
+                    cout << "M" << ",";
+                else
+                    cout << machineJob[i][j] + 1 << ",";
+            }
         }
     }
     
@@ -276,3 +343,4 @@ void machineRanking(int* machineJobClearTime, double* machinePriority,
 
     insertionSort(machinePriority, machineRank, machineNum);
 }
+
