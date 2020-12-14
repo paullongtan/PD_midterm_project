@@ -1,8 +1,8 @@
 //
 //  main.cpp
-//  Midterm-Project-input
+//  Project_fixVer2
 //
-//  Created by 王彥普 on 2020/12/5.
+//  Created by 王彥普 on 2020/12/9.
 //
 
 #include <iostream>
@@ -98,7 +98,7 @@ int main()
     bool* considerFix = new bool[machineNum];
     for (int i = 0; i < machineNum; i++)
     {
-        if (low[i] * fixTime[i] >= (100 - low[i]) / decrease[i] * (100 - low[i]) /2)
+        if (low[i] * fixTime[i] >= (output[i] - low[i]) / decrease[i] * output[i] /2)
             considerFix[i] = 0;
         else
             considerFix[i] = 1;
@@ -119,9 +119,15 @@ int main()
     {
         // 先把訂單排序
         orderRanking(orderFinish, orderPriority, orderRank, orderQuantity, orderDDL, orderNum, currentTime);
+        machineRanking(machineJobClearTime, machinePriority, machineRank, machineNum, output, init,             decrease, low);
+//        cout << currentTime << endl;
+//        for (int i = 0; i < orderNum; i++)
+//            cout << orderRank[i] << ",";
+//        cout << endl;
         // 此期已分配的訂單數
         int distributedNum = 0;
         int machineFixNum = 0;
+        
         for (int i = 0; i < machineNum; i++)
         {
             if (finish == orderNum)
@@ -132,7 +138,7 @@ int main()
             if (machineJobClearTime[machineRank[i]] == 0)
             {
                 double whenMaintain = (orderQuantity[orderRank[distributedNum]] / output[machineRank[i]]) * (decrease[machineRank[i]] / decrease[machineRank[i]] + 3) + fixTime[machineRank[i]];
-                double whenNoMaintain = (orderQuantity[orderRank[distributedNum]] / (output[machineRank[i]] * init[machineRank[i]])) * (decrease[machineRank[i]] / decrease[machineRank[i]] + 3) + 3;
+                double whenNoMaintain = (orderQuantity[orderRank[distributedNum]] / (output[machineRank[i]] * init[machineRank[i]])) * (decrease[machineRank[i]] / decrease[machineRank[i]] + 3);
                 bool underFix = false;
                 
                 if(whenMaintain <= whenNoMaintain && machineFixNum < fixLim)
@@ -241,6 +247,7 @@ int main()
         
     }while (finish < orderNum);
     
+    
     for (int i = 0; i < machineNum; i++)
     {
         if (jobNum[i] == 0)
@@ -327,7 +334,7 @@ void machineRanking(int* machineJobClearTime, double* machinePriority,
     for (int i = 0; i < machineNum; i++)
     {
         if (machineJobClearTime[i] == 1)
-            machinePriority[i] = output[i] * init[i] * (1 / (decrease[i] + 10)) * (low[i] / 10);
+            machinePriority[i] = output[i] * init[i] * (1 / (decrease[i] + 5)) * (low[i] / 10);
         else
             machinePriority[i] = 0;
     }
@@ -338,4 +345,3 @@ void machineRanking(int* machineJobClearTime, double* machinePriority,
 
     insertionSort(machinePriority, machineRank, machineNum);
 }
-
